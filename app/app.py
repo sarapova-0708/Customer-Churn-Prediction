@@ -5,18 +5,18 @@ from pathlib import Path
 
 from utils import create_input_dataframe
 
-# -------------------------------------------------------
+# =========================================================
 # Load Model & Preprocessor
-# -------------------------------------------------------
+# =========================================================
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 model = joblib.load(BASE_DIR / "models" / "final_xgboost_model.pkl")
 preprocessor = joblib.load(BASE_DIR / "models" / "preprocessor.pkl")
 
-# -------------------------------------------------------
+# =========================================================
 # Page Configuration
-# -------------------------------------------------------
+# =========================================================
 
 st.set_page_config(
     page_title="Customer Churn Prediction",
@@ -29,17 +29,42 @@ st.write(
     "Predict whether a telecom customer is likely to churn."
 )
 
+# =========================================================
+# Sidebar
+# =========================================================
+
+st.sidebar.title("📊 Dashboard")
+
+st.sidebar.markdown("---")
+
+st.sidebar.subheader("Model")
+st.sidebar.write("XGBoost")
+
+st.sidebar.subheader("Performance")
+st.sidebar.write("Accuracy : 96.38%")
+st.sidebar.write("F1 Score : 0.929")
+st.sidebar.write("ROC-AUC : 0.991")
+
+st.sidebar.markdown("---")
+
+st.sidebar.subheader("Developer")
+st.sidebar.write("Your Name")
+
+st.sidebar.markdown("---")
+
+st.sidebar.info(
+    "Predict customer churn using Machine Learning."
+)
+
 st.markdown("---")
 
-# -------------------------------------------------------
+# =========================================================
 # Customer Information
-# -------------------------------------------------------
+# =========================================================
 
 st.header("Customer Information")
 
 col1, col2 = st.columns(2)
-
-# ================= LEFT COLUMN ================= #
 
 with col1:
 
@@ -80,8 +105,6 @@ with col1:
             "Two Year"
         ]
     )
-
-# ================= RIGHT COLUMN ================= #
 
 with col2:
 
@@ -133,17 +156,18 @@ with col2:
         5,
         3
     )
-# -------------------------------------------------------
+
+# =========================================================
 # Predict Button
-# -------------------------------------------------------
+# =========================================================
 
 st.markdown("---")
 
 predict_button = st.button("Predict Churn")
 
-# -------------------------------------------------------
+# =========================================================
 # Prediction
-# -------------------------------------------------------
+# =========================================================
 
 if predict_button:
 
@@ -222,34 +246,45 @@ if predict_button:
         "Satisfaction Score": satisfaction_score,
 
         "CLTV": 4500
+
     }
 
-    # Create DataFrame
+    # -----------------------------------------------------
+    # Preprocess & Predict
+    # -----------------------------------------------------
+
     input_df = create_input_dataframe(user_input)
 
-    # Preprocess
     processed = preprocessor.transform(input_df)
 
-    # Prediction
     prediction = model.predict(processed)[0]
+
     probability = model.predict_proba(processed)[0][1]
+
     confidence = max(probability, 1 - probability)
 
-    # -------------------------------
+    # -----------------------------------------------------
     # Prediction Result
-    # -------------------------------
+    # -----------------------------------------------------
 
     st.markdown("---")
+
     st.header("Prediction Result")
+
+    st.write(
+        "The model predicts whether the customer is likely to churn based on the information provided."
+    )
 
     if prediction == 1:
         st.error("⚠️ Customer is likely to Churn")
     else:
         st.success("✅ Customer is likely to Stay")
 
+    # -----------------------------------------------------
     # Metrics
+    # -----------------------------------------------------
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         st.metric(
@@ -263,16 +298,80 @@ if predict_button:
             f"{confidence*100:.2f}%"
         )
 
-    # -------------------------------
-    # Recommendation
-    # -------------------------------
+    with col3:
+
+        if probability < 0.30:
+            risk = "🟢 Low"
+
+        elif probability < 0.70:
+            risk = "🟡 Medium"
+
+        else:
+            risk = "🔴 High"
+
+        st.metric(
+            "Risk Level",
+            risk
+        )
+
+    # -----------------------------------------------------
+    # Progress Bar
+    # -----------------------------------------------------
+
+    st.markdown("### Churn Probability")
+
+    st.progress(float(probability))
+
+    # -----------------------------------------------------
+    # Customer Summary
+    # -----------------------------------------------------
 
     st.markdown("---")
+
+    st.subheader("Customer Summary")
+
+    summary = pd.DataFrame({
+
+        "Feature": [
+
+            "Gender",
+            "Age",
+            "Contract",
+            "Tenure",
+            "Internet Type",
+            "Monthly Charge",
+            "Satisfaction Score"
+
+        ],
+
+        "Value": [
+
+            gender,
+            age,
+            contract,
+            tenure,
+            internet_type,
+            monthly_charge,
+            satisfaction_score
+
+        ]
+
+    })
+
+    st.table(summary)
+
+    # -----------------------------------------------------
+    # Recommendation
+    # -----------------------------------------------------
+
+    st.markdown("---")
+
     st.subheader("Recommendation")
 
     if prediction == 1:
 
-        st.warning("""
+        st.warning(
+            """
 Recommended Actions
 
 • Offer loyalty discounts
@@ -282,23 +381,27 @@ Recommended Actions
 • Improve customer support
 
 • Recommend a long-term contract
-""")
+"""
+        )
 
     else:
 
-        st.success("""
+        st.success(
+            """
 Customer appears loyal.
 
 Continue providing quality service.
 
 Offer premium plans to increase revenue.
-""")
+"""
+        )
 
-    # -------------------------------
+    # -----------------------------------------------------
     # Model Information
-    # -------------------------------
+    # -----------------------------------------------------
 
     st.markdown("---")
+
     st.subheader("Model Information")
 
     st.write("""
